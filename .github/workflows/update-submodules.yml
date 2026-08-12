@@ -28,13 +28,7 @@ jobs:
           git config --global http.sslVerify false
 
           # サブモジュールの最新化
-          git submodule update --remote
-
-          # 各サブモジュールディレクトリに移動して unrelated histories を許可したマージを行う
-          git submodule foreach --recursive '
-            git fetch origin
-            git merge origin/main --allow-unrelated-histories --no-edit || true
-          '
+          git submodule update --remote --rebase --recursive
 
       - name: Check for changes, commit and push
         run: |
