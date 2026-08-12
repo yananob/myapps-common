@@ -1,0 +1,47 @@
+name: Update Submodule
+
+on:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_PAT }} # PATを指定
+
+      - name: Update submodules to latest
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 【重要】SSL証明書の検証をオフにしてエラーを回避する
+          git config --global http.sslVerify false
+
+          # サブモジュールの最新化
+          git submodule update --remote
+
+          # 各サブモジュールディレクトリに移動して unrelated histories を許可したマージを行う
+          git submodule foreach --recursive '
+            git fetch origin
+            git merge origin/main --allow-unrelated-histories --no-edit || true
+          '
+
+      - name: Check for changes, commit and push
+        run: |
+          # 変更（差分）があるかどうかをチェック
+          git diff --quiet && git diff --staged --quiet
+          if [ $? -eq 0 ]; then
+            echo "変更はないから、コミット＆プッシュはスキップするで。"
+          else
+            echo "変更を検知したから、コミット＆プッシュを実行するで。"
+            git add .
+            git commit -m "chore: auto-update submodules to latest"
+            git push
+          fi
