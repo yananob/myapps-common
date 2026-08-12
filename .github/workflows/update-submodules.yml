@@ -39,6 +39,6 @@ jobs:
           else
             echo "変更を検知したから、コミット＆プッシュを実行するで。"
             git add .
-            git commit -m "chore: auto-update submodules to latest"
+            git commit -m "chore: auto-update submodules to latest [skip ci]"
             git push
           fi
