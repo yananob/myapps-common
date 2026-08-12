@@ -1,0 +1,119 @@
+name: Update Packages
+
+on:
+  workflow_call:
+    secrets:
+      GH_PAT:
+        required: false
+        description: 'GitHub Personal Access Token for pushing changes'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Detect Package Managers
+        id: detect
+        run: |
+          echo "=== Detecting Package Managers ==="
+
+          # Detect Composer
+          if [ -n "$(find . -name "composer.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" -print -quit)" ]; then
+            echo "Composer detected."
+            echo "HAS_COMPOSER=true" >> $GITHUB_ENV
+          else
+            echo "No Composer files found."
+            echo "HAS_COMPOSER=false" >> $GITHUB_ENV
+          fi
+
+          # Detect NPM
+          if [ -n "$(find . -name "package.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" -print -quit)" ]; then
+            echo "NPM detected."
+            echo "HAS_NPM=true" >> $GITHUB_ENV
+          else
+            echo "No NPM files found."
+            echo "HAS_NPM=false" >> $GITHUB_ENV
+          fi
+
+          # Detect Gradle (Kotlin/Java)
+          if [ -n "$(find . \( -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" -o -name "*.kt" \) -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" -print -quit)" ]; then
+            echo "Kotlin/Gradle detected."
+            echo "HAS_GRADLE=true" >> $GITHUB_ENV
+          else
+            echo "No Kotlin/Gradle files found."
+            echo "HAS_GRADLE=false" >> $GITHUB_ENV
+          fi
+
+      - name: Update Composer Packages
+        if: env.HAS_COMPOSER == 'true'
+        run: |
+          echo "=== Updating Composer Dependencies ==="
+          find . -name "composer.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" | while read -r composer_path; do
+            dir=$(dirname "$composer_path")
+            echo "Updating in directory: $dir"
+            (cd "$dir" && composer update --no-interaction --no-progress --ignore-platform-reqs)
+          done
+
+      - name: Update NPM Packages
+        if: env.HAS_NPM == 'true'
+        run: |
+          echo "=== Updating NPM Dependencies ==="
+          find . -name "package.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" | while read -r package_path; do
+            dir=$(dirname "$package_path")
+            echo "Updating in directory: $dir"
+            (cd "$dir" && npm update)
+          done
+
+      - name: Update Kotlin (Gradle) Packages
+        if: env.HAS_GRADLE == 'true'
+        run: |
+          echo "=== Updating Gradle/Kotlin Dependencies ==="
+          # Find unique directories that are Gradle roots (containing settings.gradle/settings.gradle.kts)
+          gradle_roots=$(find . \( -name "settings.gradle" -o -name "settings.gradle.kts" \) -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" | xargs -I {} dirname {} | sort -u)
+
+          if [ -z "$gradle_roots" ]; then
+            # Fallback to directories containing build.gradle/build.gradle.kts if settings.gradle is not present
+            gradle_roots=$(find . \( -name "build.gradle" -o -name "build.gradle.kts" \) -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" | xargs -I {} dirname {} | sort -u)
+          fi
+
+          echo "$gradle_roots" | while read -r dir; do
+            if [ -z "$dir" ]; then continue; fi
+            echo "Updating Gradle dependencies in: $dir"
+            if [ -f "$dir/gradlew" ]; then
+              (cd "$dir" && chmod +x gradlew && ./gradlew dependencies --write-locks --no-daemon)
+            elif [ -f "./gradlew" ]; then
+              chmod +x ./gradlew
+              ./gradlew -p "$dir" dependencies --write-locks --no-daemon
+            else
+              if command -v gradle >/dev/null 2>&1; then
+                (cd "$dir" && gradle dependencies --write-locks --no-daemon)
+              else
+                echo "Warning: gradle command not found, skipping $dir"
+              fi
+            fi
+          done
+
+      - name: Commit and Push Changes
+        run: |
+          echo "=== Committing and Pushing Changes ==="
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No package lockfile or dependency changes detected. Skipping commit and push."
+          else
+            echo "Changes detected in dependencies or lockfiles. Creating commit..."
+            git add .
+            git commit -m "chore: auto-update package dependencies within version ranges"
+            git push
+          fi
