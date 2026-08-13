@@ -31,7 +31,7 @@ jobs:
           echo "=== Detecting Package Managers ==="
 
           # Detect Composer
-          if [ -n "$(find . -name "composer.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" -print -quit)" ]; then
+          if [ -n "$(find . -name "composer.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_myapps-common/*" -print -quit)" ]; then
             echo "Composer detected."
             echo "HAS_COMPOSER=true" >> $GITHUB_ENV
           else
@@ -40,7 +40,7 @@ jobs:
           fi
 
           # Detect NPM
-          if [ -n "$(find . -name "package.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" -print -quit)" ]; then
+          if [ -n "$(find . -name "package.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_myapps-common/*" -print -quit)" ]; then
             echo "NPM detected."
             echo "HAS_NPM=true" >> $GITHUB_ENV
           else
@@ -49,7 +49,7 @@ jobs:
           fi
 
           # Detect Gradle (Kotlin/Java)
-          if [ -n "$(find . \( -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" -o -name "*.kt" \) -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" -print -quit)" ]; then
+          if [ -n "$(find . \( -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" -o -name "*.kt" \) -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_myapps-common/*" -print -quit)" ]; then
             echo "Kotlin/Gradle detected."
             echo "HAS_GRADLE=true" >> $GITHUB_ENV
           else
@@ -61,7 +61,7 @@ jobs:
         if: env.HAS_COMPOSER == 'true'
         run: |
           echo "=== Updating Composer Dependencies ==="
-          find . -name "composer.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" | while read -r composer_path; do
+          find . -name "composer.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_myapps-common/*" | while read -r composer_path; do
             dir=$(dirname "$composer_path")
             echo "Updating in directory: $dir"
             (cd "$dir" && composer update --no-interaction --no-progress --ignore-platform-reqs)
@@ -71,7 +71,7 @@ jobs:
         if: env.HAS_NPM == 'true'
         run: |
           echo "=== Updating NPM Dependencies ==="
-          find . -name "package.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" | while read -r package_path; do
+          find . -name "package.json" -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_myapps-common/*" | while read -r package_path; do
             dir=$(dirname "$package_path")
             echo "Updating in directory: $dir"
             (cd "$dir" && npm update)
@@ -82,11 +82,11 @@ jobs:
         run: |
           echo "=== Updating Gradle/Kotlin Dependencies ==="
           # Find unique directories that are Gradle roots (containing settings.gradle/settings.gradle.kts)
-          gradle_roots=$(find . \( -name "settings.gradle" -o -name "settings.gradle.kts" \) -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" | xargs -I {} dirname {} | sort -u)
+          gradle_roots=$(find . \( -name "settings.gradle" -o -name "settings.gradle.kts" \) -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_myapps-common/*" | xargs -I {} dirname {} | sort -u)
 
           if [ -z "$gradle_roots" ]; then
             # Fallback to directories containing build.gradle/build.gradle.kts if settings.gradle is not present
-            gradle_roots=$(find . \( -name "build.gradle" -o -name "build.gradle.kts" \) -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_cf-common/*" | xargs -I {} dirname {} | sort -u)
+            gradle_roots=$(find . \( -name "build.gradle" -o -name "build.gradle.kts" \) -not -path "*/vendor/*" -not -path "*/node_modules/*" -not -path "*/_myapps-common/*" | xargs -I {} dirname {} | sort -u)
           fi
 
           echo "$gradle_roots" | while read -r dir; do

@@ -51,7 +51,7 @@ echo "Starting to deploy ${FUNC_NAME}"
 rm -rf ./${WORK_DIR}
 mkdir -p ${WORK_DIR}
 
-rsync -vaL --exclude-from=./_cf-common/deploy/rsync_exclude.conf ./${TARGET_DIR} ./${WORK_DIR}/
+rsync -vaL --exclude-from=./_myapps-common/deploy/rsync_exclude.conf ./${TARGET_DIR} ./${WORK_DIR}/
 pushd ${WORK_DIR}
 
 echo -e "\e[33m deploying event function [${FUNC_NAME}] \e[m"

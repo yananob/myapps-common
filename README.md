@@ -48,15 +48,15 @@ PHPプロジェクトをはじめとしたシステム開発における、Googl
 
 ### 1. プロジェクトへの追加 (Git Submodule)
 
-プロジェクトのルートディレクトリで以下のコマンドを実行し、本リポジトリを `_cf-common` として追加します。
+プロジェクトのルートディレクトリで以下のコマンドを実行し、本リポジトリを `_myapps-common` として追加します。
 
 ```bash
-git submodule add https://github.com/your-org/cf-common.git _cf-common
+git submodule add https://github.com/your-org/cf-common.git _myapps-common
 ```
 
 ### 2. ローカルからの Cloud Functions デプロイ
 
-1. `_cf-common/deploy/RENAME_deploy.sh` をプロジェクトのルートにコピーし、リネームします（例: `deploy.sh`）。
+1. `_myapps-common/deploy/RENAME_deploy.sh` をプロジェクトのルートにコピーし、リネームします（例: `deploy.sh`）。
 2. `deploy.sh` 内の関数名やデプロイタイプをプロジェクトに合わせて編集します。
 3. 必要に応じて、プロジェクトルートに `.gcloudignore` や `configs/config.json` を作成します。
 4. スクリプトを実行してデプロイします。
@@ -131,11 +131,11 @@ jobs:
 ```bash
 # SECRETS 配列に取得したいシークレット名を定義
 export SECRETS=("SECRET_A" "SECRET_B")
-source _cf-common/test/export_secrets.sh
+source _myapps-common/test/export_secrets.sh
 ```
 
 使い終わったシークレットの環境変数をクリアしたい場合は、以下を実行します。
 
 ```bash
-source _cf-common/test/unset_secrets.sh
+source _myapps-common/test/unset_secrets.sh
 ```
