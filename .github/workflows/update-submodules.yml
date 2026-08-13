@@ -31,7 +31,9 @@ jobs:
           # git submodule update --remote --rebase --recursive
           git submodule status | awk '{print $2}' | while read -r sub; do
             echo "=== Processing: $sub ==="
+            pushd "$sub"
             git pull --rebase
+            popd
           done
 
       - name: Check for changes, commit and push
