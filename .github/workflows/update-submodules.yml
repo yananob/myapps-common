@@ -27,8 +27,12 @@ jobs:
           # 【重要】SSL証明書の検証をオフにしてエラーを回避する
           git config --global http.sslVerify false
 
-          # サブモジュールの最新化
-          git submodule update --remote --rebase --recursive
+          # # サブモジュールの最新化
+          # git submodule update --remote --rebase --recursive
+          git submodule status | awk '{print $2}' | while read -r sub; do
+            echo "=== Processing: $sub ==="
+            git pull --rebase
+          done
 
       - name: Check for changes, commit and push
         run: |
