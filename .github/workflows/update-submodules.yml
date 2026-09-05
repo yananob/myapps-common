@@ -31,7 +31,9 @@ jobs:
             echo "=== Processing: $sub ==="
             pushd "$sub"
             git fetch origin
-            git rebase -X theirs "origin/$(git rev-parse --abbrev-ref HEAD)"
+            git checkout main
+            git reset --hard
+            git clean -fd
             popd
           done
 
