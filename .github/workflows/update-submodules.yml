@@ -30,10 +30,10 @@ jobs:
           git submodule status | awk '{print $2}' | while read -r sub; do
             echo "=== Processing: $sub ==="
             pushd "$sub"
-            git fetch origin
-            git checkout main
-            git reset --hard
-            git clean -fd
+            # git fetch origin
+            # git checkout main
+            # git reset --hard
+            # git clean -fd
             git pull --rebase
             popd
           done
