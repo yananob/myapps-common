@@ -24,17 +24,32 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 【重要】SSL証明書の検証をオフにしてエラーを回避する
-          git config --global http.sslVerify false
-
           git submodule status | awk '{print $2}' | while read -r sub; do
             echo "=== Processing: $sub ==="
             pushd "$sub"
-            # git fetch origin
-            # git checkout main
-            # git reset --hard
-            # git clean -fd
-            git pull --rebase
+
+            branch=$(git branch --show-current)
+
+            if [ -z "$branch" ]; then
+              echo "ERROR: $sub is in detached HEAD state"
+              exit 1
+            fi
+
+            echo "Current branch: $branch"
+
+            git fetch origin
+
+            if ! git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+              echo "ERROR: origin/$branch does not exist"
+              exit 1
+            fi
+
+            git reset --hard "origin/$branch"
+            git clean -fd
+
+            echo "Updated:"
+            git log -1 --oneline
+
             popd
           done
 
