@@ -24,34 +24,26 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          git submodule status | awk '{print $2}' | while read -r sub; do
-            echo "=== Processing: $sub ==="
-            pushd "$sub"
+          git submodule foreach --recursive '
+            echo "=== Processing: $name ==="
 
-            branch=$(git branch --show-current)
+            branch=$(git config -f "$toplevel/.gitmodules" "submodule.$name.branch")
 
             if [ -z "$branch" ]; then
-              echo "ERROR: $sub is in detached HEAD state"
+              echo "ERROR: branch is not configured for $name"
               exit 1
             fi
 
-            echo "Current branch: $branch"
+            echo "Target branch: $branch"
 
-            git fetch origin
-
-            if ! git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-              echo "ERROR: origin/$branch does not exist"
-              exit 1
-            fi
-
+            git fetch origin "$branch"
+            git checkout -B "$branch" "origin/$branch"
             git reset --hard "origin/$branch"
             git clean -fd
 
-            echo "Updated:"
+            echo "Updated to:"
             git log -1 --oneline
-
-            popd
-          done
+          '
 
       - name: Check for changes, commit and push
         run: |
