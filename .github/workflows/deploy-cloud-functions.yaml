@@ -106,6 +106,16 @@ on:
         required: true
         type: string
         default: ''
+      enable_auto_tag:
+        description: 'デプロイ成功時に自動でタグを打つかどうか'
+        required: false
+        type: boolean
+        default: false
+      tag_name:
+        description: '作成するタグ名（指定しない場合は年月日＋時分 YYYYMMDDHHMM になります）'
+        required: false
+        type: string
+        default: ''
     secrets:
       GCP_PROJECT_ID:
         required: true
@@ -113,9 +123,12 @@ on:
         required: true
       GCP_PROJECT_NUMBER:
         required: true
+      GH_PAT:
+        description: 'タグプッシュ用のPersonal Access Token (省略時はGITHUB_TOKENを使用)'
+        required: false
 
 permissions:
-  contents: 'read'
+  contents: 'write'
   id-token: 'write'
 
 jobs:
@@ -313,3 +326,13 @@ jobs:
           secrets: ${{ steps.decode_secrets_event.outputs.secrets_list }}
           environment_variables: |-
            ${{ inputs.environment_variables }}
+
+  create-tag:
+    name: Create Release Tag
+    needs: [upload-static, deploy-http, deploy-event]
+    if: always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && (inputs.enable_auto_tag || inputs.tag_name != '')
+    uses: ./.github/workflows/create-release-tag.yml
+    with:
+      tag_name: ${{ inputs.tag_name }}
+    secrets:
+      GH_PAT: ${{ secrets.GH_PAT }}

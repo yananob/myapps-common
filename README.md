@@ -13,8 +13,10 @@ PHPプロジェクトをはじめとしたシステム開発における、Googl
      - Cloud Storage への静的ファイルアップロード支援。
      - HTTP トリガーおよび Pub/Sub トリガーのデプロイ。
      - Cloud Functions のデプロイ時に作成されるアーティファクトのクリーンアップポリシー設定（GCS バケットのライフサイクルポリシー）。
+     - 本番デプロイ成功時の自動/手動タグ発行 (`create-release-tag.yml`)。
 
-2. **パッケージ & サブモジュール自動アップデートワークフロー**
+2. **リリース・パッケージ & サブモジュール自動アップデートワークフロー**
+   - **リリース automatic タギング (`create-release-tag.yml`)**: 本番デプロイ成功時などに自動または手動で git タグ（指定なしの場合は `YYYYMMDDHHMM` 形式）を発行し、不具合発生時のロールバックポイントを作成します。
    - **パッケージ自動更新 (`update-packages.yml`)**: Composer、NPM、Gradle/Kotlin の各パッケージマネージャーの依存関係を自動的に検出・更新し、差分があれば自動でコミットおよびプッシュします。
    - **サブモジュール自動更新 (`update-submodules.yml`)**: リポジトリ内の git submodule を再帰的に最新化し、差分があれば自動でコミットおよびプッシュします。
 
@@ -33,6 +35,7 @@ PHPプロジェクトをはじめとしたシステム開発における、Googl
     - `RENAME_deploy.sh`: プロジェクトにコピーして使用するデプロイスクリプトのテンプレート。
 - `.github/workflows/`: 再利用可能な GitHub Actions ワークフロー。
     - `deploy-cloud-functions.yaml`: 関数のデプロイ用ワークフロー。
+    - `create-release-tag.yml`: リリースタグ作成用ワークフロー。
     - `remove-cloud-functions.yaml`: 関数の削除用ワークフロー。
     - `update-packages.yml`: パッケージ（Composer, NPM, Gradle）自動更新ワークフロー。
     - `update-submodules.yml`: サブモジュール自動更新ワークフロー。
@@ -70,6 +73,7 @@ git submodule add https://github.com/your-org/cf-common.git _myapps-common
 #### A. Cloud Functions のデプロイ
 
 プロジェクトの `.github/workflows/deploy.yml` から再利用可能なワークフローを呼び出します。
+`enable_auto_tag: true` を指定することで、デプロイ成功時に自動的に日時タグ（例: `202603311200`）が打たれます。タグ名を指定したい場合は `tag_name` パラメータを使用します。
 
 ```yaml
 jobs:
@@ -81,12 +85,25 @@ jobs:
       region: 'us-west1'
       service_account_name: 'github-actions-sa'
       gcp_project_number: '1234567890'
+      enable_auto_tag: true
       secrets_config: |
         MY_SECRET
         ANOTHER_SECRET
 ```
 
-#### B. 依存パッケージの自動アップデート
+#### B. リリースタグの単体作成 (`create-release-tag.yml`)
+
+デプロイワークフローとは別に単体でタグを打ちたい場合にも利用できます。
+
+```yaml
+jobs:
+  tag:
+    uses: ./.github/workflows/create-release-tag.yml@main
+    with:
+      tag_name: 'v1.0.0' # 省略した場合は JST の YYYYMMDDHHMM
+```
+
+#### C. 依存パッケージの自動アップデート
 
 プロジェクト内の Composer, NPM, Gradle の依存パッケージを定期的に自動アップデートするには、プロジェクト側のワークフローから以下のように呼び出します。
 
@@ -105,7 +122,7 @@ jobs:
       GH_PAT: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 ```
 
-#### C. サブモジュールの自動アップデート
+#### D. サブモジュールの自動アップデート
 
 呼び出し元プロジェクトに組み込まれているサブモジュールを最新のコミットに追従させる場合、以下のように呼び出します。
 
