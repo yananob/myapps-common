@@ -1,0 +1,51 @@
+name: Create Release Tag
+
+on:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: '作成するタグ名。空の場合は現在日時に基づき自動生成 (YYYYMMDDHHMM)'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      GH_PAT:
+        description: 'タグプッシュ用のPersonal Access Token (省略時はGITHUB_TOKENを使用)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Determine Tag Name
+        id: tag_info
+        shell: bash
+        run: |
+          INPUT_TAG="${{ inputs.tag_name }}"
+          if [ -n "$INPUT_TAG" ]; then
+            TAG_NAME="$INPUT_TAG"
+          else
+            TAG_NAME=$(TZ='Asia/Tokyo' date +'%Y%m%d%H%M')
+          fi
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "Generated tag name: $TAG_NAME"
+
+      - name: Create and Push Tag
+        shell: bash
+        env:
+          TAG_NAME: ${{ steps.tag_info.outputs.tag_name }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          echo "Creating tag: $TAG_NAME"
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
