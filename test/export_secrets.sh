@@ -1,10 +1,17 @@
 #!/bin/bash
-set -eu
+
+if [ -z "${SECRETS+x}" ] || [ "${#SECRETS[@]}" -eq 0 ]; then
+    echo "Error: SECRETS array is not set or empty. Please define SECRETS array before sourcing this script."
+    echo "Example: export SECRETS=(\"MY_SECRET_1\" \"MY_SECRET_2\")"
+    return 1 2>/dev/null || exit 1
+fi
 
 echo "Exporting secrets..."
 
-# IFS=',' read -ra SECRETS <<< "$1"
 for secret in "${SECRETS[@]}"; do
-    export "$secret"="$(gcloud secrets versions access latest --secret="$secret")"
-    # echo "$secret: ${!secret}"    # for debugging purposes
+    if [ -n "${secret}" ]; then
+        echo "Fetching secret: ${secret}"
+        VAL=$(gcloud secrets versions access latest --secret="${secret}" 2>/dev/null || echo "")
+        export "${secret}=${VAL}"
+    fi
 done

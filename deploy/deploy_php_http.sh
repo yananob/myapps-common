@@ -1,73 +1,66 @@
 #!/bin/bash
 set -eu
 
-source ./_myapps-common/deploy/common.sh
+COMMON_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "${COMMON_SCRIPT_DIR}/common.sh" ]; then
+    source "${COMMON_SCRIPT_DIR}/common.sh"
+elif [ -f "./_myapps-common/deploy/common.sh" ]; then
+    source ./_myapps-common/deploy/common.sh
+fi
 
 if [ "$#" -lt 2 ]; then
-  echo ""
-  echo "  Insufficient arguments."
-  echo "  Usage: $0 <dirname to be deployed> <name on Cloud Functions> <entry point: default=main_http>"
-  echo ""
-  exit 1
+    echo ""
+    echo "  Insufficient arguments."
+    echo "  Usage: $0 <dirname to be deployed> <name on Cloud Functions> [entry point: default=main_http]"
+    echo ""
+    exit 1
 fi
 
-WORK_DIR=_deploy
-TARGET_DIR=$1
-export FUNC_NAME=$2
-# remove "/" on the right side
-FUNC_NAME=`php -r '$result=getenv("FUNC_NAME"); echo substr($result, -1) === "/" ? rtrim($result, "/") : $result;'`
-
-if [ "$#" -lt 3 ]; then
-    ENTRY_POINT=main_http
-else
-    ENTRY_POINT=$3
-fi
+TARGET_DIR="$1"
+FUNC_NAME="${2%/}"
+ENTRY_POINT="${3:-main_http}"
+WORK_DIR="${PWD}/_deploy"
 
 echo "Checking ${TARGET_DIR}"
-# pushd ${FUNC_NAME}
 
-# Check existance of .gcloudignore
-if ! test -f ".gcloudignore"; then
+# Check existence of .gcloudignore
+if [ ! -f ".gcloudignore" ]; then
     echo ".gcloudignore doesn't exist. Please create it."
     exit 1
 fi
 
-# # Check existance of specific deploy.sh
-# if test -f "deploy.sh"; then
-#     echo "Specific deploy.sh for this app exists. Please run it instead of this shell."
-#     exit 1
-# fi
-
-# check existance of config.sample.json & config.json
-if test -f "configs/config.json.sample"; then
-    if test ! -f "configs/config.json"; then
-        echo "Config.json.sample exists. Please make config.json for this app."
-        exit 1
-    fi
+# Check existence of config.json if config.json.sample exists
+if [ -f "configs/config.json.sample" ] && [ ! -f "configs/config.json" ]; then
+    echo "configs/config.json.sample exists. Please create configs/config.json for this app."
+    exit 1
 fi
-# popd
 
 echo "----------------------------------------------------------------"
 echo "Starting to deploy ${FUNC_NAME}"
 
-rm -rf ./${WORK_DIR}
-mkdir -p ${WORK_DIR}
+# Clean up temporary deployment directory on exit or failure
+trap 'rm -rf "${WORK_DIR}"' EXIT
 
-rsync -vaL --exclude-from=./_myapps-common/deploy/rsync_exclude.conf ./${TARGET_DIR} ./${WORK_DIR}/
-pushd ${WORK_DIR}
+rm -rf "${WORK_DIR}"
+mkdir -p "${WORK_DIR}"
+
+RSYNC_CONF="./_myapps-common/deploy/rsync_exclude.conf"
+if [ ! -f "${RSYNC_CONF}" ]; then
+    RSYNC_CONF="${COMMON_SCRIPT_DIR}/rsync_exclude.conf"
+fi
+
+rsync -vaL --exclude-from="${RSYNC_CONF}" "./${TARGET_DIR}/" "${WORK_DIR}/"
+pushd "${WORK_DIR}" > /dev/null
 
 echo -e "\e[33m deploying http function [${FUNC_NAME}] \e[m"
-gcloud functions deploy ${FUNC_NAME} \
+gcloud functions deploy "${FUNC_NAME}" \
     --gen2 \
     --runtime=php82 \
-    --region=us-west1 \
+    --region="${REGION:-us-west1}" \
     --source=. \
-    --entry-point=${ENTRY_POINT} \
-    --set-secrets OPENAI_KEY_LINE_AI_BOT=OPENAI_KEY_LINE_AI_BOT:latest \
-    --set-secrets LINE_TOKENS_N_TARGETS=LINE_TOKENS_N_TARGETS:latest \
+    --entry-point="${ENTRY_POINT}" \
     --trigger-http \
     --allow-unauthenticated \
     --max-instances 1
 
-popd
-rm -rf ./${WORK_DIR}
+popd > /dev/null

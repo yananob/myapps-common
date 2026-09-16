@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
-          token: ${{ secrets.GH_PAT }} # PATを指定
+          token: ${{ secrets.GH_PAT }}
 
       - name: Update submodules to latest
         run: |
@@ -47,12 +47,10 @@ jobs:
 
       - name: Check for changes, commit and push
         run: |
-          # 変更（差分）があるかどうかをチェック
-          git diff --quiet && git diff --staged --quiet
-          if [ $? -eq 0 ]; then
-            echo "変更はないから、コミット＆プッシュはスキップするで。"
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes detected. Skipping commit and push."
           else
-            echo "変更を検知したから、コミット＆プッシュを実行するで。"
+            echo "Changes detected. Committing and pushing updates..."
             git add .
             git commit -m "chore: auto-update submodules to latest [skip ci]"
             git push
