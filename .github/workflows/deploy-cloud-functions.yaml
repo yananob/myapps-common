@@ -24,7 +24,7 @@ on:
 
       secrets_config:
         description: 'シークレット名の複数行文字列（例: "SECRET_A\nSECRET_B"）'
-        required: true
+        required: false
         type: string
       runtime:
         description: 'Cloud Functionのランタイム（例: php82）'
