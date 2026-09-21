@@ -126,8 +126,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
-        # with:
-        #   submodules: 'true'
 
       - name: Google Cloud認証
         id: 'auth'
@@ -156,8 +154,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
-        # with:
-        #   submodules: 'true'
 
       - name: Google Cloud認証
         id: 'auth'
@@ -200,7 +196,7 @@ jobs:
           done <<< "$SECRETS_CONFIG"
 
           echo "secrets_list=$secrets_output" >> "$GITHUB_OUTPUT"
-          
+
           if [ -n "$secrets_output" ]; then
             echo "Formatted Secrets: $secrets_output"
           else
@@ -243,8 +239,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
-        # with:
-        #   submodules: 'true'
 
       - name: Google Cloud認証
         id: 'auth'

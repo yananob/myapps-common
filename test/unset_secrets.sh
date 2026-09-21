@@ -1,10 +1,14 @@
 #!/bin/bash
-set -eu
+
+if [ -z "${SECRETS+x}" ] || [ "${#SECRETS[@]}" -eq 0 ]; then
+    echo "Error: SECRETS array is not set or empty. Please define SECRETS array before sourcing this script."
+    return 1 2>/dev/null || exit 1
+fi
 
 echo "Unsetting secrets..."
 
-# Remove credentials
-# IFS=',' read -ra SECRETS <<< "$1"
 for secret in "${SECRETS[@]}"; do
-    unset "$secret"
+    if [ -n "${secret}" ]; then
+        unset "${secret}"
+    fi
 done
