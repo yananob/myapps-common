@@ -16,7 +16,8 @@ PHPプロジェクトをはじめとしたシステム開発における、Googl
      - HTTP トリガーおよび Pub/Sub トリガーのデプロイ。
      - Cloud Functions 削除ワークフロー (`remove-cloud-functions.yaml`)。
 
-2. **パッケージ & サブモジュール自動アップデートワークフロー**
+2. **リリース・パッケージ & サブモジュール自動アップデートワークフロー**
+   - **リリース自動タグ付け (`create-release-tag.yml`)**: main へのマージ時やリリース時に自動で Git タグ（デフォルト: JST の `YYYYMMDDHHMM`）を作成・プッシュする再利用可能ワークフロー。指定したタグ名での付与にも対応。
    - **パッケージ自動更新 (`update-packages.yml`)**: Composer、NPM、Gradle/Kotlin の各パッケージマネージャーの依存関係を自動的に検出・更新し、差分があれば自動でコミットおよびプッシュします。
    - **サブモジュール自動更新 (`update-submodules.yml`)**: リポジトリ内の git submodule を再帰的に最新化し、差分があれば自動でコミットおよびプッシュします。
 
@@ -37,6 +38,7 @@ PHPプロジェクトをはじめとしたシステム開発における、Googl
 - `.github/`: 再利用可能な GitHub Actions ワークフローおよびアクション。
   - `workflows/deploy-cloud-functions.yaml`: 関数のデプロイ用ワークフロー。
   - `workflows/remove-cloud-functions.yaml`: 関数の削除用ワークフロー。
+  - `workflows/create-release-tag.yml`: リリース用自動タグ作成ワークフロー。
   - `workflows/update-packages.yml`: パッケージ（Composer, NPM, Gradle）自動更新ワークフロー。
   - `workflows/update-submodules.yml`: サブモジュール自動更新ワークフロー。
   - `actions/put_firebase_config/`: Firebase 設定ファイル作成アクション。
@@ -97,7 +99,33 @@ jobs:
       GCP_PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
 ```
 
-#### B. 依存パッケージの自動アップデート
+#### B. リリース時の自動タグ打刻
+
+`main` ブランチへのマージ時やリリース時に自動でタグを打つ場合、以下のように呼び出します。
+
+```yaml
+name: Create Release Tag
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'タグ名（未指定の場合は YYYYMMDDHHMM）'
+        required: false
+
+jobs:
+  create-tag:
+    uses: ./.github/workflows/create-release-tag.yml@main
+    with:
+      tag_name: ${{ inputs.tag_name }}
+    secrets:
+      GH_PAT: ${{ secrets.PERSONAL_ACCESS_TOKEN }} # 必要な場合のみ指定
+```
+
+#### C. 依存パッケージの自動アップデート
 
 プロジェクト内の Composer, NPM, Gradle の依存パッケージを定期的に自動アップデートするには、プロジェクト側のワークフローから以下のように呼び出します。
 
@@ -116,7 +144,7 @@ jobs:
       GH_PAT: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 ```
 
-#### C. サブモジュールの自動アップデート
+#### D. サブモジュールの自動アップデート
 
 呼び出し元プロジェクトに組み込まれているサブモジュールを最新のコミットに追従させる場合、以下のように呼び出します。
 

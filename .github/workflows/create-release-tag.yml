@@ -1,0 +1,59 @@
+name: Create Release Tag
+
+on:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'タグ名（未指定の場合は JST の YYYYMMDDHHMM）'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      GH_PAT:
+        description: 'GitHub Personal Access Token（タグプッシュ権限用）'
+        required: false
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'タグ名（未指定の場合は JST の YYYYMMDDHHMM）'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine Tag Name
+        id: determine_tag
+        shell: bash
+        env:
+          INPUT_TAG_NAME: ${{ inputs.tag_name }}
+        run: |
+          if [ -z "$INPUT_TAG_NAME" ]; then
+            TAG_NAME=$(TZ='Asia/Tokyo' date +'%Y%m%d%H%M')
+          else
+            TAG_NAME="$INPUT_TAG_NAME"
+          fi
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "Target tag name: $TAG_NAME"
+
+      - name: Create and Push Tag
+        shell: bash
+        run: |
+          TAG_NAME="${{ steps.determine_tag.outputs.tag_name }}"
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
