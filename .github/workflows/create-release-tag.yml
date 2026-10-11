@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       tag_name:
-        description: 'タグ名（未指定の場合は JST の YYYYMMDDHHMM）'
+        description: 'タグ名（未指定の場合は JST の YYYYMMDD_HHMM）'
         required: false
         type: string
         default: ''
@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'タグ名（未指定の場合は JST の YYYYMMDDHHMM）'
+        description: 'タグ名（未指定の場合は JST の YYYYMMDD_HHMM）'
         required: false
         type: string
         default: ''
@@ -44,7 +44,7 @@ jobs:
           INPUT_TAG_NAME: ${{ inputs.tag_name }}
         run: |
           if [ -z "$INPUT_TAG_NAME" ]; then
-            TAG_NAME=$(TZ='Asia/Tokyo' date +'%Y%m%d%H%M')
+            TAG_NAME=$(TZ='Asia/Tokyo' date +'%Y%m%d_%H%M')
           else
             TAG_NAME="$INPUT_TAG_NAME"
           fi
