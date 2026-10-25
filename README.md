@@ -9,20 +9,22 @@ PHPプロジェクトをはじめとしたシステム開発における、Googl
    - **ローカルデプロイスクリプト**: PHP 関数の HTTP トリガーおよびイベント（Pub/Sub）トリガーを安全かつ簡単にデプロイするための Bash スクリプトを提供します。
      - 終了時・失敗時の自動一時ディレクトリ（`_deploy`）クリーンアップ（`trap` 処理）。
      - 環境変数 `REGION` による任意リージョンの指定（デフォルト: `us-west1`）。
+     - 前置条件チェックおよびステージング処理を共通関数モジュール（`common.sh`）へ集約。
    - **再利用可能な GitHub Actions ワークフロー**:
      - Workload Identity Federation による安全な GCP 認証。
      - Secret Manager との統合。
      - Cloud Storage への静的ファイルアップロード支援。
      - HTTP トリガーおよび Pub/Sub トリガーのデプロイ。
      - Cloud Functions 削除ワークフロー (`remove-cloud-functions.yaml`)。
+     - Firebase 設定デコード用コンポジットアクション (`put_firebase_config`)。
 
 2. **リリース・パッケージ & サブモジュール自動アップデートワークフロー**
-   - **リリース自動タグ付け (`create-release-tag.yml`)**: main へのマージ時やリリース時に自動で Git タグ（デフォルト: JST の `YYYYMMDDHHMM`）を作成・プッシュする再利用可能ワークフロー。指定したタグ名での付与にも対応。
+   - **リリース自動タグ付け (`create-release-tag.yml`)**: main へのマージ時やリリース時に自動で Git タグ（デフォルト: JST の `YYYYMMDD_HHMM`）を作成・プッシュする再利用可能ワークフロー。指定したタグ名での付与にも対応。
    - **パッケージ自動更新 (`update-packages.yml`)**: Composer、NPM、Gradle/Kotlin の各パッケージマネージャーの依存関係を自動的に検出・更新し、差分があれば自動でコミットおよびプッシュします。
    - **サブモジュール自動更新 (`update-submodules.yml`)**: リポジトリ内の git submodule を再帰的に最新化し、差分があれば自動でコミットおよびプッシュします。
 
 3. **ユーティリティ & 開発支援**
-   - **シークレット読み込みスクリプト (`export_secrets.sh` / `unset_secrets.sh`)**: ローカル開発時に、Google Secret Manager から指定した秘密情報を動的に取得し、環境変数に展開・解除するヘルパースクリプトです。
+   - **シークレット読み込みスクリプト (`export_secrets.sh` / `unset_secrets.sh`)**: ローカル開発時に、Google Secret Manager から指定した秘密情報を動的に取得し、環境変数に展開・解除するヘルパースクリプトです。環境変数名の構文検証および一時変数の自動クリーンアップ処理を含みます。
    - **GCS アーティファクトクリーンアップポリシー (`misc/artifact_cleanup_policy/`)**: GCS Artifact Registry バケット（`gcf-artifacts`）のクリーンアップポリシーを設定・参照するスクリプトを提供します。
 
 ---
@@ -32,7 +34,7 @@ PHPプロジェクトをはじめとしたシステム開発における、Googl
 - `deploy/`: ローカルデプロイ用のシェルスクリプト。
   - `deploy_php_http.sh`: HTTP トリガーの PHP 関数をデプロイします。
   - `deploy_php_event.sh`: Pub/Sub トリガーの PHP 関数をデプロイします。
-  - `common.sh`: 各デプロイスクリプトで共通利用される GCP プロジェクト・リージョン設定。
+  - `common.sh`: 各デプロイスクリプトで共通利用される GCP プロジェクト・リージョン設定、事前チェック、ステージング処理関数。
   - `RENAME_deploy.sh`: プロジェクトにコピーして使用するデプロイスクリプトのテンプレート。
   - `rsync_exclude.conf`: デプロイ対象から除外するファイル・ディレクトリ定義。
 - `.github/`: 再利用可能な GitHub Actions ワークフローおよびアクション。
@@ -113,7 +115,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'タグ名（未指定の場合は YYYYMMDDHHMM）'
+        description: 'タグ名（未指定の場合は YYYYMMDD_HHMM）'
         required: false
 
 jobs:
@@ -161,6 +163,17 @@ jobs:
     uses: ./.github/workflows/update-submodules.yml@main
     secrets:
       GH_PAT: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+```
+
+#### E. Firebase 設定ファイルの生成
+
+Workflows から `put_firebase_config` アクションを利用して `configs/firebase.json` を動的に作成できます。
+
+```yaml
+steps:
+  - uses: ./.github/actions/put_firebase_config
+    with:
+      COMMON_FIREBASE_BASE64: ${{ secrets.FIREBASE_CONFIG_BASE64 }}
 ```
 
 ### 4. 開発用シークレットヘルパーの利用

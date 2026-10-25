@@ -27,11 +27,12 @@ jobs:
           git submodule foreach --recursive '
             echo "=== Processing: $name ==="
 
-            branch=$(git config -f "$toplevel/.gitmodules" "submodule.$name.branch")
+            branch=$(git config -f "$toplevel/.gitmodules" "submodule.$name.branch" 2>/dev/null || echo "")
 
             if [ -z "$branch" ]; then
-              echo "ERROR: branch is not configured for $name"
-              exit 1
+              branch=$(git remote show origin 2>/dev/null | grep "HEAD branch" | cut -d" " -f5)
+              branch="${branch:-main}"
+              echo "No branch specified in .gitmodules for $name, defaulting to: $branch"
             fi
 
             echo "Target branch: $branch"
@@ -47,7 +48,7 @@ jobs:
 
       - name: Check for changes, commit and push
         run: |
-          if git diff --quiet && git diff --staged --quiet; then
+          if [ -z "$(git status --porcelain)" ]; then
             echo "No changes detected. Skipping commit and push."
           else
             echo "Changes detected. Committing and pushing updates..."
