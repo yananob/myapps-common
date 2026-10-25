@@ -1,10 +1,18 @@
+name: "Put Firebase Config"
+description: "Decodes base64-encoded Firebase configuration and writes it to configs/firebase.json"
+inputs:
+  COMMON_FIREBASE_BASE64:
+    description: "Base64 encoded Firebase configuration content"
+    required: true
+
 runs:
-  using: "Composite"
+  using: "composite"
 
   steps:
     - name: Create configs/firebase.json
       env:
         DECODED_BASE64: ${{ inputs.COMMON_FIREBASE_BASE64 }}
       run: |
-        mkdir -p ./configs && echo $DECODED_BASE64 | base64 --decode > ./configs/firebase.json
+        mkdir -p ./configs
+        printf '%s' "$DECODED_BASE64" | base64 --decode > ./configs/firebase.json
       shell: bash

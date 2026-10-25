@@ -103,7 +103,7 @@ on:
         default: '-event'
       environment_variables:
         description: '環境変数を KEY=VALUE,KEY2=VALUE2 の形式で渡します'
-        required: true
+        required: false
         type: string
         default: ''
     secrets:

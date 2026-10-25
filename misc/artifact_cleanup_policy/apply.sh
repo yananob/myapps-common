@@ -16,12 +16,18 @@ if [ -z "${PROJECT_ID}" ]; then
     exit 1
 fi
 
+POLICY_FILE="${SCRIPT_DIR}/policy.json"
+if [ ! -f "${POLICY_FILE}" ]; then
+    echo "Error: Policy file not found at ${POLICY_FILE}."
+    exit 1
+fi
+
 echo "Applying Artifact Registry cleanup policy to repository 'gcf-artifacts' in project '${PROJECT_ID}' (${REGION_NAME})..."
 
 gcloud artifacts repositories set-cleanup-policies gcf-artifacts \
     --project="${PROJECT_ID}" \
     --location="${REGION_NAME}" \
-    --policy="${SCRIPT_DIR}/policy.json" \
+    --policy="${POLICY_FILE}" \
     --no-dry-run
 
 echo "Listing current cleanup policies for 'gcf-artifacts':"

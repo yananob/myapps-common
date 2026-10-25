@@ -21,19 +21,7 @@ FUNC_NAME="${2%/}"
 ENTRY_POINT="${3:-main_http}"
 WORK_DIR="${PWD}/_deploy"
 
-echo "Checking ${TARGET_DIR}"
-
-# Check existence of .gcloudignore
-if [ ! -f ".gcloudignore" ]; then
-    echo ".gcloudignore doesn't exist. Please create it."
-    exit 1
-fi
-
-# Check existence of config.json if config.json.sample exists
-if [ -f "configs/config.json.sample" ] && [ ! -f "configs/config.json" ]; then
-    echo "configs/config.json.sample exists. Please create configs/config.json for this app."
-    exit 1
-fi
+check_prerequisites "${TARGET_DIR}"
 
 echo "----------------------------------------------------------------"
 echo "Starting to deploy ${FUNC_NAME}"
@@ -41,18 +29,11 @@ echo "Starting to deploy ${FUNC_NAME}"
 # Clean up temporary deployment directory on exit or failure
 trap 'rm -rf "${WORK_DIR}"' EXIT
 
-rm -rf "${WORK_DIR}"
-mkdir -p "${WORK_DIR}"
+prepare_staging_dir "${TARGET_DIR}" "${WORK_DIR}" "${COMMON_SCRIPT_DIR}"
 
-RSYNC_CONF="./_myapps-common/deploy/rsync_exclude.conf"
-if [ ! -f "${RSYNC_CONF}" ]; then
-    RSYNC_CONF="${COMMON_SCRIPT_DIR}/rsync_exclude.conf"
-fi
-
-rsync -vaL --exclude-from="${RSYNC_CONF}" "./${TARGET_DIR}/" "${WORK_DIR}/"
 pushd "${WORK_DIR}" > /dev/null
 
-echo -e "\e[33m deploying http function [${FUNC_NAME}] \e[m"
+printf "\033[33m deploying http function [%s] \033[0m\n" "${FUNC_NAME}"
 gcloud functions deploy "${FUNC_NAME}" \
     --gen2 \
     --runtime=php82 \
